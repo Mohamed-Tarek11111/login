@@ -12,6 +12,10 @@ mongoose.connect(DB_URL)
   .catch((err) => console.error("Database connection failed:", err));
 
 const courseSchema = new mongoose.Schema({
+  id: {
+    type:Number,
+    required: true,
+  },
   name: {
     type: String,
     required: true,

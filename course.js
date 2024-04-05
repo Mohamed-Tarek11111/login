@@ -1,7 +1,7 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const router = express.Router();
 const Course = require("./dbConnect");
-<<<<<<< HEAD
 const ImageKit = require("imagekit");
 const multer = require("multer");
 
@@ -12,9 +12,6 @@ const imagekit = new ImageKit({
   urlEndpoint: process.env.urlEndpoint,
   authenticationEndpoint: process.env.authenticationEndpoint,
 });
-=======
-// mo
->>>>>>> 94c48f392e07f588144a27afb2ebef6ab4cce925
 
 // إعداد Multer لتحميل الصور
 const storage = multer.diskStorage({
@@ -31,7 +28,7 @@ const upload = multer({ storage: storage });
 router.post("/upload-image", upload.single("image"), async (req, res) => {
   try {
     const imageUrl = req.file.path; // استخدام مسار الصورة المحملة
-    const { name, description } = req.body;
+    const { name, description, id } = req.body;
 
     // تحميل الصورة إلى ImageKit
     const uploadResponse = await imagekit.upload({
@@ -42,6 +39,7 @@ router.post("/upload-image", upload.single("image"), async (req, res) => {
 
     // إنشاء كائن دورة جديد
     const newCourse = new Course({
+      id: id,
       name: name,
       img: uploadResponse.url,
       description: description,
@@ -56,6 +54,73 @@ router.post("/upload-image", upload.single("image"), async (req, res) => {
     // إرسال رد خطأ في حالة حدوث خطأ
     console.error("خطأ في تحميل الصورة:", err);
     res.status(500).send("فشل في تحميل الصورة.");
+  }
+});
+
+router.patch("/upload-image/:id", upload.single("image"), async (req, res) => {
+  const { id } = req.params;
+  const { path: imageUrl } = req.file;
+  const { name, description } = req.body;
+
+  try {
+    // تحقق مما إذا كان المعرف هو ObjectId صالحًا
+    const isValidObjectId = mongoose.Types.ObjectId.isValid(id);
+
+    let course;
+    if (isValidObjectId) {
+      // إذا كان المعرف ObjectId صالحًا، فاستخدمه مباشرة
+      course = await Course.findById(id);
+    } else {
+      // إذا لم يكن المعرف ObjectId صالحًا، فاستخدمه كما هو
+      course = await Course.findOne({ id: parseInt(id) });
+    }
+
+    if (!course) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+
+    // Update course properties
+    course.name = name;
+    course.description = description;
+    course.img = imageUrl;
+
+    // Save the updated course
+    await course.save();
+
+    res.json(course);
+  } catch (error) {
+    console.error("Error updating course:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+router.delete("/upload-image/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // تحقق مما إذا كان المعرف هو ObjectId صالحًا
+    const isValidObjectId = mongoose.Types.ObjectId.isValid(id);
+
+    let course;
+    if (isValidObjectId) {
+      // إذا كان المعرف ObjectId صالحًا، فاستخدمه مباشرة
+      course = await Course.findById(id);
+    } else {
+      // إذا لم يكن المعرف ObjectId صالحًا، فاستخدمه كما هو
+      course = await Course.findOne({ id: parseInt(id) });
+    }
+
+    if (!course) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+
+    // حذف الدورة إذا تم العثور عليها
+    await course.deleteOne(); // أو استخدم findOneAndDelete()
+
+    res.json({ message: "Course deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting course:", error);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 });
 
