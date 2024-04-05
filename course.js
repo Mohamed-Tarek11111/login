@@ -169,7 +169,7 @@ router.listen(500, () => {
 })
 
 
-//catch (err) {
+//.catch (err) {
     //console.error("خطأ في مسح الصورة:", err);
     //res.status(500).send("فشل في مسح الصورة.");
     //}
