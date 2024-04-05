@@ -5,6 +5,8 @@ const Course = require("./dbConnect");
 const ImageKit = require("imagekit");
 const multer = require("multer");
 const fs = require('fs');
+const axios = require('axios');
+
 
 // إعداد ImageKit
 const imagekit = new ImageKit({
@@ -16,6 +18,16 @@ const imagekit = new ImageKit({
 =======
 // mo
 >>>>>>> 94c48f392e07f588144a27afb2ebef6ab4cce925
+
+
+axios.get('http://process.env.authenticationEndpoint')
+.then(function (response) {
+  console.log(response.data);
+})
+.catch(function(error) {
+  console.log(error);
+});
+
 
 // إعداد Multer لتحميل الصور
 const storage = multer.diskStorage({
