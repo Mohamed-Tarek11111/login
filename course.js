@@ -27,8 +27,12 @@ const upload = multer({ storage: storage });
 // إنشاء نقطة نهاية لإضافة بيانات الدورة مع ImageKit
 router.post("/upload-image", upload.single("image"), async (req, res) => {
   try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No image uploaded" });
+    }
+
     const imageUrl = req.file.path; // استخدام مسار الصورة المحملة
-    const { name, description, id } = req.body;
+    const { name, description } = req.body;
 
     // تحميل الصورة إلى ImageKit
     const uploadResponse = await imagekit.upload({
@@ -37,12 +41,15 @@ router.post("/upload-image", upload.single("image"), async (req, res) => {
       tags: ["tag1"],
     });
 
+    // استخراج imageId من uploadResponse
+    const imageId = uploadResponse.fileId; // تأكد من توافر الخاصية الصحيحة
+
     // إنشاء كائن دورة جديد
     const newCourse = new Course({
-      id: id,
       name: name,
       img: uploadResponse.url,
       description: description,
+      imageId: imageId, // تضمين imageId في سجل الـ Course
     });
 
     // حفظ الدورة في قاعدة البيانات
@@ -58,8 +65,7 @@ router.post("/upload-image", upload.single("image"), async (req, res) => {
 });
 
 router.patch("/upload-image/:id", upload.single("image"), async (req, res) => {
-  const { id } = req.params;
-  const { path: imageUrl } = req.file;
+  let { path: imageUrl } = req.file;
   const { name, description } = req.body;
 
   try {
@@ -99,32 +105,42 @@ router.patch("/upload-image/:id", upload.single("image"), async (req, res) => {
   }
 });
 
-router.delete("/upload-image/:id", async (req, res) => {
+router.delete("/delete-image/:id", async (req, res) => {
   const { id } = req.params;
 
   try {
-    // تحقق مما إذا كان المعرف هو ObjectId صالحًا
-    const isValidObjectId = mongoose.Types.ObjectId.isValid(id);
-
     let course;
-    if (isValidObjectId) {
-      // إذا كان المعرف ObjectId صالحًا، فاستخدمه مباشرة
+
+    // تحقق من صحة المعرف والعثور على الدورة المرتبطة بالمعرف
+    if (mongoose.Types.ObjectId.isValid(id)) {
       course = await Course.findById(id);
     } else {
-      // إذا لم يكن المعرف ObjectId صالحًا، فاستخدمه كما هو
       course = await Course.findOne({ id: parseInt(id) });
     }
 
+    // التحقق مما إذا كانت الدورة موجودة
     if (!course) {
-      return res.status(404).json({ message: "Course not found" });
+      throw new Error("Course not found");
     }
 
-    // حذف الدورة إذا تم العثور عليها
-    await course.deleteOne(); // أو استخدم findOneAndDelete()
+    // التحقق مما إذا كانت الدورة تحتوي على صورة
+    if (!course.imageId) {
+      return res.status(400).json({ message: "Course does not have an image" });
+    }
 
-    res.json({ message: "Course deleted successfully" });
+    // حذف الصورة من ImageKit
+    await imagekit.deleteFile(course.imageId.split("/").pop());
+
+    // حدث الدورة لتحديث الصورة المرتبطة
+    // course.img = null;
+    await course.save();
+
+    res.json({ message: "Image deleted successfully" });
+
+    // حذف الدورة إذا تم العثور عليها
+    await course.deleteOne();
   } catch (error) {
-    console.error("Error deleting course:", error);
+    console.error("Error deleting image:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 });

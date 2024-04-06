@@ -7,13 +7,14 @@ const path = require("path");
 dot_env.config({ path: path.join(__dirname, ".env") });
 const DB_URL = process.env.DB_URL;
 
-mongoose.connect(DB_URL)
+mongoose
+  .connect(DB_URL)
   .then(() => console.log("Database is connected"))
   .catch((err) => console.error("Database connection failed:", err));
 
 const courseSchema = new mongoose.Schema({
-  id: {
-    type:Number,
+  imageId: {
+    type: String,
     required: true,
   },
   name: {
@@ -27,7 +28,7 @@ const courseSchema = new mongoose.Schema({
   description: {
     type: String,
     required: true,
-  }
+  },
 });
 
 const Course = mongoose.model("Course", courseSchema);
